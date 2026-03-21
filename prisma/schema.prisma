@@ -1,0 +1,353 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== ENUMS ====================
+
+enum UserRole {
+  ADMIN
+  MEMBER
+  GUEST
+}
+
+enum ClubMemberRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum SessionStatus {
+  DRAFT
+  OPEN
+  FULL
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum PlayerStatus {
+  REGISTERED
+  CHECKED_IN
+  PLAYING
+  WAITING
+  LEFT
+}
+
+enum PaymentStatus {
+  UNPAID
+  PAID
+  PARTIAL
+}
+
+enum MatchStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum MatchType {
+  SINGLES
+  DOUBLES
+}
+
+enum CourtStatus {
+  AVAILABLE
+  IN_USE
+  MAINTENANCE
+}
+
+enum QueueStatus {
+  WAITING
+  CALLED
+  PLAYING
+  SKIPPED
+  DONE
+}
+
+enum RankTier {
+  BRONZE
+  SILVER
+  GOLD
+  PLATINUM
+  DIAMOND
+}
+
+enum ExpenseCategory {
+  COURT
+  SHUTTLECOCK
+  OTHER
+}
+
+// ==================== MODELS ====================
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String?   @unique
+  phone         String?
+  lineId        String?   @unique
+  avatarUrl     String?
+  role          UserRole  @default(MEMBER)
+  rankPoints    Int       @default(0)
+  rankTier      RankTier  @default(BRONZE)
+  totalWins     Int       @default(0)
+  totalLosses   Int       @default(0)
+  totalSessions Int       @default(0)
+  streak        Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  clubMemberships ClubMember[]
+  sessionPlayers  SessionPlayer[]
+  matchPlayers    MatchPlayer[]
+  queueEntries    QueueEntry[]
+  rankHistory     RankHistory[]
+  payments        Payment[]
+  achievements    UserAchievement[]
+  ownedClubs      Club[]           @relation("ClubOwner")
+
+  @@map("users")
+}
+
+model Club {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  inviteCode  String   @unique
+  ownerId     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner   User         @relation("ClubOwner", fields: [ownerId], references: [id])
+  members ClubMember[]
+  venues  Venue[]
+  sessions Session[]
+
+  @@map("clubs")
+}
+
+model ClubMember {
+  id        String         @id @default(cuid())
+  clubId    String
+  userId    String
+  role      ClubMemberRole @default(MEMBER)
+  joinedAt  DateTime       @default(now())
+
+  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([clubId, userId])
+  @@map("club_members")
+}
+
+model Venue {
+  id           String  @id @default(cuid())
+  name         String
+  address      String?
+  courtsCount  Int     @default(1)
+  pricePerHour Float   @default(0)
+  contactInfo  String?
+  clubId       String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  club     Club      @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  sessions Session[]
+  courts   Court[]
+
+  @@map("venues")
+}
+
+model Court {
+  id       String      @id @default(cuid())
+  number   Int
+  name     String?
+  status   CourtStatus @default(AVAILABLE)
+  venueId  String
+
+  venue   Venue   @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  matches Match[]
+
+  @@unique([venueId, number])
+  @@map("courts")
+}
+
+model Session {
+  id               String        @id @default(cuid())
+  title            String
+  date             DateTime
+  startTime        DateTime
+  endTime          DateTime
+  maxPlayers       Int           @default(20)
+  costPerPerson    Float         @default(0)
+  shuttlecockUsed  Int           @default(0)
+  shuttlecockCost  Float         @default(0)
+  totalCost        Float         @default(0)
+  status           SessionStatus @default(DRAFT)
+  shareToken       String        @unique
+  notes            String?
+  venueId          String
+  clubId           String
+  isRecurring      Boolean       @default(false)
+  recurringRule    String?       // e.g. "WEEKLY:MON,WED" or "MONTHLY:1,15"
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  venue    Venue           @relation(fields: [venueId], references: [id])
+  club     Club            @relation(fields: [clubId], references: [id])
+  players  SessionPlayer[]
+  matches  Match[]
+  queue    QueueEntry[]
+  expenses Expense[]
+  payments Payment[]
+
+  @@map("sessions")
+}
+
+model SessionPlayer {
+  id            String        @id @default(cuid())
+  sessionId     String
+  userId        String?       // null for guest players
+  guestName     String?       // name for non-registered players
+  guestPhone    String?
+  status        PlayerStatus  @default(REGISTERED)
+  checkinAt     DateTime?
+  roundsPlayed  Int           @default(0)
+  waitTimeTotal Int           @default(0) // seconds
+  paymentStatus PaymentStatus @default(UNPAID)
+  amountDue     Float         @default(0)
+  amountPaid    Float         @default(0)
+  joinedAt      DateTime      @default(now())
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [id])
+
+  @@unique([sessionId, userId])
+  @@map("session_players")
+}
+
+model Match {
+  id          String      @id @default(cuid())
+  sessionId   String
+  courtId     String?
+  courtNumber Int
+  matchType   MatchType   @default(DOUBLES)
+  team1Score  Int         @default(0)
+  team2Score  Int         @default(0)
+  status      MatchStatus @default(PENDING)
+  startTime   DateTime?
+  endTime     DateTime?
+  roundNumber Int         @default(1)
+  createdAt   DateTime    @default(now())
+
+  session Session       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  court   Court?        @relation(fields: [courtId], references: [id])
+  players MatchPlayer[]
+
+  @@map("matches")
+}
+
+model MatchPlayer {
+  id       String  @id @default(cuid())
+  matchId  String
+  userId   String
+  team     Int     // 1 or 2
+  isWinner Boolean @default(false)
+
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id])
+
+  @@unique([matchId, userId])
+  @@map("match_players")
+}
+
+model QueueEntry {
+  id                 String      @id @default(cuid())
+  sessionId          String
+  userId             String
+  position           Int
+  status             QueueStatus @default(WAITING)
+  joinedAt           DateTime    @default(now())
+  calledAt           DateTime?
+  waitDurationSeconds Int        @default(0)
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@unique([sessionId, userId])
+  @@map("queue_entries")
+}
+
+model RankHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  points    Int
+  reason    String   // e.g. "SESSION_JOIN", "MATCH_WIN", "MATCH_LOSS", "STREAK_BONUS"
+  sessionId String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("rank_history")
+}
+
+model Payment {
+  id        String        @id @default(cuid())
+  sessionId String
+  userId    String
+  amount    Float
+  method    String?       // "CASH", "TRANSFER", "PROMPTPAY"
+  note      String?
+  status    PaymentStatus @default(UNPAID)
+  paidAt    DateTime?
+  createdAt DateTime      @default(now())
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@map("payments")
+}
+
+model Expense {
+  id          String          @id @default(cuid())
+  sessionId   String
+  category    ExpenseCategory
+  amount      Float
+  description String?
+  createdAt   DateTime        @default(now())
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("expenses")
+}
+
+model Achievement {
+  id          String @id @default(cuid())
+  name        String @unique
+  description String
+  iconUrl     String?
+  condition   String // JSON string describing condition
+
+  users UserAchievement[]
+
+  @@map("achievements")
+}
+
+model UserAchievement {
+  id            String   @id @default(cuid())
+  userId        String
+  achievementId String
+  earnedAt      DateTime @default(now())
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@map("user_achievements")
+}
