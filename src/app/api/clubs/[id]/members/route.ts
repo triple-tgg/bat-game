@@ -4,15 +4,16 @@ import { prisma } from "@/lib/prisma";
 // POST /api/clubs/[id]/members — add member to club
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const body = await request.json();
   const { userId, role = "MEMBER", inviteCode } = body;
 
   // Allow joining via invite code without userId (link-based)
   if (inviteCode) {
     const club = await prisma.club.findUnique({
-      where: { inviteCode, id: params.id },
+      where: { inviteCode, id: id },
     });
     if (!club) {
       return NextResponse.json({ error: "Invalid invite code" }, { status: 400 });
@@ -24,14 +25,14 @@ export async function POST(
   }
 
   const existing = await prisma.clubMember.findUnique({
-    where: { clubId_userId: { clubId: params.id, userId } },
+    where: { clubId_userId: { clubId: id, userId } },
   });
   if (existing) {
     return NextResponse.json({ error: "Already a member" }, { status: 409 });
   }
 
   const member = await prisma.clubMember.create({
-    data: { clubId: params.id, userId, role },
+    data: { clubId: id, userId, role },
     include: { user: { select: { id: true, name: true } } },
   });
 
@@ -41,12 +42,13 @@ export async function POST(
 // DELETE /api/clubs/[id]/members — remove member
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const { userId } = await request.json();
 
   const member = await prisma.clubMember.findUnique({
-    where: { clubId_userId: { clubId: params.id, userId } },
+    where: { clubId_userId: { clubId: id, userId } },
   });
   if (!member) {
     return NextResponse.json({ error: "Member not found" }, { status: 404 });
@@ -56,7 +58,7 @@ export async function DELETE(
   }
 
   await prisma.clubMember.delete({
-    where: { clubId_userId: { clubId: params.id, userId } },
+    where: { clubId_userId: { clubId: id, userId } },
   });
 
   return NextResponse.json({ success: true });

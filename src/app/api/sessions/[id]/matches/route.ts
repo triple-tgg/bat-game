@@ -5,10 +5,11 @@ import { RANK_POINTS, calculateRankTier, getStreakBonus } from "@/lib/ranking";
 // GET /api/sessions/[id]/matches - List matches for a session
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const matches = await prisma.match.findMany({
-    where: { sessionId: params.id },
+    where: { sessionId: id },
     include: {
       players: {
         include: {

@@ -6,10 +6,11 @@ import { checkAndAwardAchievements } from "@/lib/achievements";
 // GET /api/sessions/[id]
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const session = await prisma.session.findUnique({
-    where: { id: params.id },
+    where: { id: id },
     include: {
       venue: { include: { courts: true } },
       club: true,
@@ -42,12 +43,13 @@ export async function GET(
 // PATCH /api/sessions/[id] — update session (status, shuttlecock count, etc.)
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const body = await request.json();
 
   const session = await prisma.session.update({
-    where: { id: params.id },
+    where: { id: id },
     data: body,
   });
 
@@ -57,10 +59,11 @@ export async function PATCH(
 // DELETE /api/sessions/[id]
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   await prisma.session.update({
-    where: { id: params.id },
+    where: { id: id },
     data: { status: "CANCELLED" },
   });
 
@@ -70,8 +73,9 @@ export async function DELETE(
 // POST /api/sessions/[id]?action=complete — complete session & award rank points
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const { searchParams } = new URL(request.url);
   const action = searchParams.get("action");
 
@@ -80,7 +84,7 @@ export async function POST(
   }
 
   const session = await prisma.session.findUnique({
-    where: { id: params.id },
+    where: { id: id },
     include: {
       players: { where: { status: { not: "LEFT" } } },
       expenses: true,
@@ -152,7 +156,7 @@ export async function POST(
 
   // Mark session complete
   const completed = await prisma.session.update({
-    where: { id: params.id },
+    where: { id: id },
     data: {
       status: "COMPLETED",
       totalCost,

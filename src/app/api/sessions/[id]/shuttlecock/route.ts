@@ -4,12 +4,13 @@ import { prisma } from "@/lib/prisma";
 // POST /api/sessions/[id]/shuttlecock — record shuttlecock usage
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const body = await request.json();
   const { count = 1, costPerShuttlecock } = body;
 
-  const session = await prisma.session.findUnique({ where: { id: params.id } });
+  const session = await prisma.session.findUnique({ where: { id: id } });
   if (!session) {
     return NextResponse.json({ error: "Session not found" }, { status: 404 });
   }
@@ -19,7 +20,7 @@ export async function POST(
   const costAdded = count * unitCost;
 
   const updated = await prisma.session.update({
-    where: { id: params.id },
+    where: { id: id },
     data: {
       shuttlecockUsed: newCount,
       shuttlecockCost: { increment: costAdded },
@@ -30,7 +31,7 @@ export async function POST(
   // Add to expense record
   await prisma.expense.create({
     data: {
-      sessionId: params.id,
+      sessionId: id,
       category: "SHUTTLECOCK",
       amount: costAdded,
       description: `ลูกขนไก่ ${count} ลูก`,

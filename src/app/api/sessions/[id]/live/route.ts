@@ -4,8 +4,9 @@ import { prisma } from "@/lib/prisma";
 // GET /api/sessions/[id]/live - Server-Sent Events for live dashboard
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream({
@@ -19,12 +20,12 @@ export async function GET(
       const fetchAndSend = async () => {
         try {
           const session = await prisma.session.findUnique({
-            where: { id: params.id },
+            where: { id: id },
             include: { venue: { include: { courts: true } } },
           });
 
           const activeMatches = await prisma.match.findMany({
-            where: { sessionId: params.id, status: "IN_PROGRESS" },
+            where: { sessionId: id, status: "IN_PROGRESS" },
             include: {
               players: {
                 include: {
@@ -36,7 +37,7 @@ export async function GET(
           });
 
           const queue = await prisma.queueEntry.findMany({
-            where: { sessionId: params.id, status: "WAITING" },
+            where: { sessionId: id, status: "WAITING" },
             include: {
               user: { select: { id: true, name: true, avatarUrl: true } },
             },
@@ -44,12 +45,12 @@ export async function GET(
           });
 
           const playerCount = await prisma.sessionPlayer.count({
-            where: { sessionId: params.id },
+            where: { sessionId: id },
           });
 
           const checkedInCount = await prisma.sessionPlayer.count({
             where: {
-              sessionId: params.id,
+              sessionId: id,
               status: { in: ["CHECKED_IN", "PLAYING", "WAITING"] },
             },
           });

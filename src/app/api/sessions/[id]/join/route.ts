@@ -4,13 +4,14 @@ import { prisma } from "@/lib/prisma";
 // POST /api/sessions/[id]/join - Join a session (member or guest)
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const body = await request.json();
   const { userId, guestName, guestPhone } = body;
 
   const session = await prisma.session.findUnique({
-    where: { id: params.id },
+    where: { id: id },
     include: { _count: { select: { players: true } } },
   });
 
@@ -28,7 +29,7 @@ export async function POST(
   // Check if already joined
   if (userId) {
     const existing = await prisma.sessionPlayer.findFirst({
-      where: { sessionId: params.id, userId },
+      where: { sessionId: id, userId },
     });
     if (existing) {
       return NextResponse.json(
@@ -42,7 +43,7 @@ export async function POST(
 
   const player = await prisma.sessionPlayer.create({
     data: {
-      sessionId: params.id,
+      sessionId: id,
       userId: userId || null,
       guestName: !userId ? guestName : null,
       guestPhone: !userId ? guestPhone : null,
@@ -53,7 +54,7 @@ export async function POST(
   // Update session status if full
   if (!isFull && session._count.players + 1 >= session.maxPlayers) {
     await prisma.session.update({
-      where: { id: params.id },
+      where: { id: id },
       data: { status: "FULL" },
     });
   }

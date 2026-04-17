@@ -4,16 +4,17 @@ import { prisma } from "@/lib/prisma";
 // GET /api/sessions/[id]/expenses
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const expenses = await prisma.expense.findMany({
-    where: { sessionId: params.id },
+    where: { sessionId: id },
     orderBy: { createdAt: "desc" },
   });
 
   const total = expenses.reduce((sum, e) => sum + e.amount, 0);
   const playerCount = await prisma.sessionPlayer.count({
-    where: { sessionId: params.id, status: { not: "LEFT" } },
+    where: { sessionId: id, status: { not: "LEFT" } },
   });
 
   return NextResponse.json({
@@ -27,8 +28,9 @@ export async function GET(
 // POST /api/sessions/[id]/expenses - Add expense
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const body = await request.json();
   const { category, amount, description } = body;
 
@@ -41,7 +43,7 @@ export async function POST(
 
   const expense = await prisma.expense.create({
     data: {
-      sessionId: params.id,
+      sessionId: id,
       category,
       amount,
       description,
@@ -50,22 +52,22 @@ export async function POST(
 
   // Recalculate total cost and per-person cost
   const allExpenses = await prisma.expense.findMany({
-    where: { sessionId: params.id },
+    where: { sessionId: id },
   });
   const totalCost = allExpenses.reduce((sum, e) => sum + e.amount, 0);
   const playerCount = await prisma.sessionPlayer.count({
-    where: { sessionId: params.id, status: { not: "LEFT" } },
+    where: { sessionId: id, status: { not: "LEFT" } },
   });
   const costPerPerson = playerCount > 0 ? Math.ceil(totalCost / playerCount) : 0;
 
   await prisma.session.update({
-    where: { id: params.id },
+    where: { id: id },
     data: { totalCost, costPerPerson },
   });
 
   // Update all players' amount due
   await prisma.sessionPlayer.updateMany({
-    where: { sessionId: params.id, status: { not: "LEFT" } },
+    where: { sessionId: id, status: { not: "LEFT" } },
     data: { amountDue: costPerPerson },
   });
 

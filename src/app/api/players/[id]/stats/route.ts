@@ -4,10 +4,11 @@ import { prisma } from "@/lib/prisma";
 // GET /api/players/[id]/stats - Get player statistics
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const user = await prisma.user.findUnique({
-    where: { id: params.id },
+    where: { id: id },
     select: {
       id: true,
       name: true,
@@ -28,7 +29,7 @@ export async function GET(
 
   // Recent matches
   const recentMatches = await prisma.matchPlayer.findMany({
-    where: { userId: params.id },
+    where: { userId: id },
     include: {
       match: {
         include: {
@@ -47,14 +48,14 @@ export async function GET(
 
   // Rank history
   const rankHistory = await prisma.rankHistory.findMany({
-    where: { userId: params.id },
+    where: { userId: id },
     orderBy: { createdAt: "desc" },
     take: 50,
   });
 
   // Achievements
   const achievements = await prisma.userAchievement.findMany({
-    where: { userId: params.id },
+    where: { userId: id },
     include: { achievement: true },
     orderBy: { earnedAt: "desc" },
   });
@@ -69,7 +70,7 @@ export async function GET(
     FROM match_players mp1
     JOIN match_players mp2 ON mp1."matchId" = mp2."matchId" AND mp1.team = mp2.team AND mp1."userId" != mp2."userId"
     JOIN users u ON mp2."userId" = u.id
-    WHERE mp1."userId" = ${params.id}
+    WHERE mp1."userId" = ${id}
     GROUP BY mp2."userId", u.name
     ORDER BY wins DESC
     LIMIT 5

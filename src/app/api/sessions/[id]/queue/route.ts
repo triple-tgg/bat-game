@@ -4,10 +4,11 @@ import { prisma } from "@/lib/prisma";
 // GET /api/sessions/[id]/queue - Get queue for a session
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const queue = await prisma.queueEntry.findMany({
-    where: { sessionId: params.id, status: "WAITING" },
+    where: { sessionId: id, status: "WAITING" },
     include: {
       user: { select: { id: true, name: true, avatarUrl: true, rankTier: true } },
     },

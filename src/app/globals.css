@@ -1,35 +1,61 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-@layer base {
-  body {
-    @apply bg-gray-50 text-gray-900 antialiased;
-  }
+@theme {
+  --color-primary-50: #eff6ff;
+  --color-primary-100: #dbeafe;
+  --color-primary-200: #bfdbfe;
+  --color-primary-300: #93c5fd;
+  --color-primary-400: #60a5fa;
+  --color-primary-500: #3b82f6;
+  --color-primary-600: #2563eb;
+  --color-primary-700: #1d4ed8;
+  --color-primary-800: #1e40af;
+  --color-primary-900: #1e3a8a;
+
+  --color-court-green: #22c55e;
+  --color-court-red: #ef4444;
+  --color-court-yellow: #eab308;
+  --color-court-gray: #6b7280;
 }
 
-@layer components {
-  .card {
-    @apply rounded-xl bg-white p-6 shadow-sm border border-gray-100;
-  }
-  .btn-primary {
-    @apply rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 transition-colors disabled:opacity-50;
-  }
-  .btn-secondary {
-    @apply rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors;
-  }
-  .btn-danger {
-    @apply rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 transition-colors;
-  }
-  .input {
-    @apply rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500;
-  }
-  .badge {
-    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
-  }
-  .badge-bronze { @apply bg-amber-100 text-amber-800; }
-  .badge-silver { @apply bg-gray-200 text-gray-800; }
-  .badge-gold { @apply bg-yellow-100 text-yellow-800; }
-  .badge-platinum { @apply bg-cyan-100 text-cyan-800; }
-  .badge-diamond { @apply bg-purple-100 text-purple-800; }
+body {
+  @apply bg-gray-50 text-gray-900 antialiased;
 }
+
+@utility card {
+  @apply rounded-xl bg-white p-6 shadow-sm border border-gray-100;
+}
+@utility btn-primary {
+  @apply rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white transition-colors disabled:opacity-50;
+}
+@utility btn-secondary {
+  @apply rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors;
+}
+@utility btn-danger {
+  @apply rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors;
+}
+@utility input {
+  @apply rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-hidden focus:ring-1 focus:ring-primary-500;
+}
+@utility badge {
+  @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+}
+@utility badge-bronze {
+  @apply bg-amber-100 text-amber-800;
+}
+@utility badge-silver {
+  @apply bg-gray-200 text-gray-800;
+}
+@utility badge-gold {
+  @apply bg-yellow-100 text-yellow-800;
+}
+@utility badge-platinum {
+  @apply bg-cyan-100 text-cyan-800;
+}
+@utility badge-diamond {
+  @apply bg-purple-100 text-purple-800;
+}
+
+.btn-primary:hover { background-color: var(--color-primary-700); }
+.btn-secondary:hover { background-color: var(--color-gray-50); }
+.btn-danger:hover { background-color: var(--color-red-700); }

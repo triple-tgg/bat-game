@@ -4,8 +4,9 @@ import { prisma } from "@/lib/prisma";
 // POST /api/sessions/[id]/checkin - Check in a player
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const body = await request.json();
   const { userId } = body;
 
@@ -14,7 +15,7 @@ export async function POST(
   }
 
   const player = await prisma.sessionPlayer.findFirst({
-    where: { sessionId: params.id, userId },
+    where: { sessionId: id, userId },
   });
 
   if (!player) {
@@ -42,13 +43,13 @@ export async function POST(
 
   // Add to queue
   const lastInQueue = await prisma.queueEntry.findFirst({
-    where: { sessionId: params.id },
+    where: { sessionId: id },
     orderBy: { position: "desc" },
   });
 
   await prisma.queueEntry.create({
     data: {
-      sessionId: params.id,
+      sessionId: id,
       userId,
       position: (lastInQueue?.position || 0) + 1,
       status: "WAITING",

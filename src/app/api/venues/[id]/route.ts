@@ -4,10 +4,11 @@ import { prisma } from "@/lib/prisma";
 // GET /api/venues/[id]
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const venue = await prisma.venue.findUnique({
-    where: { id: params.id },
+    where: { id: id },
     include: {
       courts: { orderBy: { number: "asc" } },
       _count: { select: { sessions: true } },
@@ -24,13 +25,14 @@ export async function GET(
 // PUT /api/venues/[id]
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const body = await request.json();
   const { name, address, courtsCount, pricePerHour, contactInfo } = body;
 
   const current = await prisma.venue.findUnique({
-    where: { id: params.id },
+    where: { id: id },
     include: { courts: true },
   });
   if (!current) {
@@ -38,7 +40,7 @@ export async function PUT(
   }
 
   const venue = await prisma.venue.update({
-    where: { id: params.id },
+    where: { id: id },
     data: { name, address, pricePerHour, contactInfo },
   });
 
@@ -48,7 +50,7 @@ export async function PUT(
       // Add new courts
       for (let i = current.courtsCount + 1; i <= courtsCount; i++) {
         await prisma.court.create({
-          data: { venueId: params.id, number: i, name: `Court ${i}` },
+          data: { venueId: id, number: i, name: `Court ${i}` },
         });
       }
     } else {
@@ -62,7 +64,7 @@ export async function PUT(
       }
     }
     await prisma.venue.update({
-      where: { id: params.id },
+      where: { id: id },
       data: { courtsCount },
     });
   }
@@ -73,11 +75,12 @@ export async function PUT(
 // DELETE /api/venues/[id]
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const activeSessions = await prisma.session.count({
     where: {
-      venueId: params.id,
+      venueId: id,
       status: { in: ["OPEN", "FULL", "IN_PROGRESS"] },
     },
   });
@@ -89,6 +92,6 @@ export async function DELETE(
     );
   }
 
-  await prisma.venue.delete({ where: { id: params.id } });
+  await prisma.venue.delete({ where: { id: id } });
   return NextResponse.json({ success: true });
 }

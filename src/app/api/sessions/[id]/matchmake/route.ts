@@ -5,13 +5,14 @@ import { randomMatchmaking, skillBasedMatchmaking } from "@/lib/matchmaking";
 // POST /api/sessions/[id]/matchmake - Auto matchmaking
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const body = await request.json();
   const { strategy = "random", matchType = "DOUBLES" } = body;
 
   const session = await prisma.session.findUnique({
-    where: { id: params.id },
+    where: { id: id },
     include: { venue: true },
   });
 
@@ -21,7 +22,7 @@ export async function POST(
 
   // Get players in queue
   const queueEntries = await prisma.queueEntry.findMany({
-    where: { sessionId: params.id, status: "WAITING" },
+    where: { sessionId: id, status: "WAITING" },
     include: {
       user: { select: { id: true, name: true, rankPoints: true } },
     },
@@ -43,7 +44,7 @@ export async function POST(
 
   // Get current round number
   const lastMatch = await prisma.match.findFirst({
-    where: { sessionId: params.id },
+    where: { sessionId: id },
     orderBy: { roundNumber: "desc" },
   });
   const roundNumber = (lastMatch?.roundNumber || 0) + 1;
@@ -53,7 +54,7 @@ export async function POST(
   for (const pairing of pairings) {
     const match = await prisma.match.create({
       data: {
-        sessionId: params.id,
+        sessionId: id,
         courtNumber: pairing.courtNumber,
         matchType,
         roundNumber,
@@ -74,7 +75,7 @@ export async function POST(
     const playerIds = [...pairing.team1, ...pairing.team2].map((p) => p.id);
     await prisma.queueEntry.updateMany({
       where: {
-        sessionId: params.id,
+        sessionId: id,
         userId: { in: playerIds },
       },
       data: { status: "PLAYING", calledAt: new Date() },
@@ -83,7 +84,7 @@ export async function POST(
     // Update session player status
     await prisma.sessionPlayer.updateMany({
       where: {
-        sessionId: params.id,
+        sessionId: id,
         userId: { in: playerIds },
       },
       data: { status: "PLAYING" },

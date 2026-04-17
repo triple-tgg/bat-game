@@ -11,10 +11,11 @@ const UpdateProfileSchema = z.object({
 // GET /api/players/[id]
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const user = await prisma.user.findUnique({
-    where: { id: params.id },
+    where: { id: id },
     select: {
       id: true,
       name: true,
@@ -43,8 +44,9 @@ export async function GET(
 // PATCH /api/players/[id]
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const body = await request.json();
   const parsed = UpdateProfileSchema.safeParse(body);
 
@@ -56,7 +58,7 @@ export async function PATCH(
   }
 
   const user = await prisma.user.update({
-    where: { id: params.id },
+    where: { id: id },
     data: parsed.data,
     select: { id: true, name: true, phone: true, avatarUrl: true },
   });

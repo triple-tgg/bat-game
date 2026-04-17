@@ -5,10 +5,11 @@ import { generateShareToken } from "@/lib/utils";
 // GET /api/clubs/[id]
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const club = await prisma.club.findUnique({
-    where: { id: params.id },
+    where: { id: id },
     include: {
       owner: { select: { id: true, name: true, avatarUrl: true } },
       members: {
@@ -34,8 +35,9 @@ export async function GET(
 // PATCH /api/clubs/[id]
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const body = await request.json();
   const { name, description, regenerateInvite } = body;
 
@@ -45,7 +47,7 @@ export async function PATCH(
   if (regenerateInvite) data.inviteCode = generateShareToken();
 
   const club = await prisma.club.update({
-    where: { id: params.id },
+    where: { id: id },
     data,
   });
 
@@ -55,11 +57,12 @@ export async function PATCH(
 // DELETE /api/clubs/[id]
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const activeSessions = await prisma.session.count({
     where: {
-      clubId: params.id,
+      clubId: id,
       status: { in: ["OPEN", "FULL", "IN_PROGRESS"] },
     },
   });
@@ -71,6 +74,6 @@ export async function DELETE(
     );
   }
 
-  await prisma.club.delete({ where: { id: params.id } });
+  await prisma.club.delete({ where: { id: id } });
   return NextResponse.json({ success: true });
 }
