@@ -34,9 +34,23 @@ export default function RootLayout({
                   <a href="/finance" className="text-sm text-gray-600 hover:text-gray-900">
                     การเงิน
                   </a>
+                  <a href="/venues" className="text-sm text-gray-600 hover:text-gray-900">
+                    สนาม
+                  </a>
+                  <a href="/admin" className="text-sm text-gray-600 hover:text-gray-900">
+                    Admin
+                  </a>
+                  <a href="/profile" className="btn-secondary text-sm">
+                    โปรไฟล์
+                  </a>
                   <a href="/login" className="btn-primary">
                     เข้าสู่ระบบ
                   </a>
+                </div>
+                {/* Mobile menu */}
+                <div className="flex md:hidden items-center gap-2">
+                  <a href="/sessions" className="btn-secondary text-xs px-2 py-1">กิจกรรม</a>
+                  <a href="/login" className="btn-primary text-xs px-2 py-1">เข้าสู่ระบบ</a>
                 </div>
               </div>
             </div>
