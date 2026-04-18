@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { RANK_POINTS, calculateRankTier, getStreakBonus } from "@/lib/ranking";
 import { checkAndAwardAchievements } from "@/lib/achievements";
+import { getNextSessionDate } from "@/lib/recurring";
+import { generateShareToken } from "@/lib/utils";
 
 // GET /api/sessions/[id]
 export async function GET(
@@ -164,5 +166,33 @@ export async function POST(
     },
   });
 
-  return NextResponse.json(completed);
+  // Auto-create next session for recurring schedules
+  let nextSession = null;
+  if (session.isRecurring && session.recurringRule) {
+    const nextDate = getNextSessionDate(session.date, session.recurringRule);
+
+    // Shift startTime and endTime by the same day delta
+    const dayDelta = nextDate.getTime() - session.date.getTime();
+    const nextStart = new Date(session.startTime.getTime() + dayDelta);
+    const nextEnd = new Date(session.endTime.getTime() + dayDelta);
+
+    nextSession = await prisma.session.create({
+      data: {
+        title: session.title,
+        date: nextDate,
+        startTime: nextStart,
+        endTime: nextEnd,
+        venueId: session.venueId,
+        clubId: session.clubId,
+        maxPlayers: session.maxPlayers,
+        notes: session.notes,
+        isRecurring: true,
+        recurringRule: session.recurringRule,
+        status: "OPEN",
+        shareToken: generateShareToken(),
+      },
+    });
+  }
+
+  return NextResponse.json({ ...completed, nextSession });
 }
