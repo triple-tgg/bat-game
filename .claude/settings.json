@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path // .tool_response.filePath' | { read -r f; echo \"$f\" | grep -qE '(prisma/schema\\.prisma|src/app/api/|src/lib/|src/middleware\\.ts|src/app/layout\\.tsx)' && echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"REMINDER: You just modified a structural file. Please check if README.md needs updating — specifically the project structure tree, database schema, API endpoints table, or pages table.\"}}'; } 2>/dev/null || true",
+            "statusMessage": "Checking if README.md needs updating..."
+          }
+        ]
+      }
+    ]
+  }
+}
