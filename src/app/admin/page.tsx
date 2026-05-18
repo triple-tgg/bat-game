@@ -60,9 +60,9 @@ async function getData() {
 }
 
 export default async function AdminDashboard() {
-  // Guard: only ADMIN can access
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login?callbackUrl=/admin");
+  if (session.user?.role !== "ADMIN") redirect("/");
 
   const data = await getData();
 
